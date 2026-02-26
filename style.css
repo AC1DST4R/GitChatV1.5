@@ -1,0 +1,67 @@
+body {
+  margin:0;
+  font-family:Arial;
+  background:#36393f;
+  color:white;
+  display:flex;
+  height:100vh;
+}
+
+.center {
+  margin:auto;
+  text-align:center;
+}
+
+.hidden {
+  display:none;
+}
+
+input {
+  padding:8px;
+  margin:5px;
+  border-radius:5px;
+  border:none;
+}
+
+button {
+  padding:8px;
+  margin:5px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  background:#5865F2;
+  color:white;
+}
+
+#app {
+  display:flex;
+  width:100%;
+}
+
+#sidebar {
+  width:220px;
+  background:#2f3136;
+  padding:15px;
+}
+
+#serverList button {
+  width:100%;
+  background:#40444b;
+}
+
+#main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+#messages {
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+}
+
+#chatBar {
+  padding:10px;
+  background:#40444b;
+}
