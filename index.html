@@ -1,335 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔥 GitChat V4</title>
-
-<style>
-body {
-  margin:0;
-  font-family: Arial;
-  background:#36393f;
-  color:white;
-  display:flex;
-  height:100vh;
-}
-
-/* AUTH SCREEN */
-#authScreen {
-  margin:auto;
-  text-align:center;
-}
-
-input {
-  padding:8px;
-  margin:5px;
-  border-radius:5px;
-  border:none;
-}
-
-button {
-  padding:8px;
-  margin:5px;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
-  background:#5865F2;
-  color:white;
-}
-
-/* APP LAYOUT */
-#app {
-  display:none;
-  width:100%;
-}
-
-/* SERVER SIDEBAR */
-#serverSidebar {
-  width:220px;
-  background:#2f3136;
-  padding:15px;
-  box-sizing:border-box;
-  display:flex;
-  flex-direction:column;
-}
-
-#serverList button {
-  width:100%;
-  background:#40444b;
-}
-
-/* MAIN CHAT */
-#main {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-}
-
-#messages {
-  flex:1;
-  padding:15px;
-  overflow-y:auto;
-}
-
-.message {
-  margin-bottom:8px;
-}
-
-#chatInputArea {
-  padding:10px;
-  background:#40444b;
-  display:flex;
-}
-
-#chatInputArea input {
-  flex:1;
-}
-
-/* SETTINGS PANEL */
-#settingsPanel {
-  display:none;
-  position:fixed;
-  right:20px;
-  top:20px;
-  background:#2f3136;
-  padding:15px;
-  border-radius:8px;
-}
-</style>
+  <meta charset="UTF-8">
+  <title>🔥 GitChat</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- AUTH SCREEN -->
-<div id="authScreen">
+<!-- AUTH -->
+<div id="authScreen" class="center">
   <h1>🔥 GitChat</h1>
   <input type="email" id="email" placeholder="Email"><br>
   <input type="password" id="password" placeholder="Password"><br>
-  <button onclick="login()">Login</button>
-  <button onclick="register()">Register</button><br><br>
-  <button onclick="googleLogin()">Continue with Google</button><br><br>
-  <button onclick="guestLogin()">Continue as Guest</button>
+  <button id="loginBtn">Login</button>
+  <button id="registerBtn">Register</button><br><br>
+  <button id="googleBtn">Continue with Google</button><br><br>
+  <button id="guestBtn">Continue as Guest</button>
 </div>
 
 <!-- APP -->
-<div id="app">
+<div id="app" class="hidden">
 
-  <!-- SERVER SIDEBAR -->
-  <div id="serverSidebar">
+  <div id="sidebar">
     <h3>Your Servers</h3>
     <div id="serverList"></div>
-    <button onclick="createServer()">+ Create Server</button>
+    <button id="createServerBtn">+ Create Server</button>
     <hr>
-    <button onclick="toggleSettings()">⚙ Settings</button>
-    <button onclick="logout()">Logout</button>
+    <button id="logoutBtn">Logout</button>
   </div>
 
-  <!-- MAIN CHAT -->
   <div id="main">
     <div id="messages"></div>
-    <div id="chatInputArea">
-      <input type="text" id="messageInput"
-        placeholder="Type message..."
-        onkeydown="if(event.key==='Enter') sendMessage()">
+    <div id="chatBar">
+      <input type="text" id="messageInput" placeholder="Type message...">
     </div>
   </div>
 
 </div>
 
-<!-- SETTINGS -->
-<div id="settingsPanel">
-  <h3>Settings</h3>
-  <input type="text" id="displayNameInput" placeholder="Display Name"><br>
-  <input type="color" id="colorInput"><br>
-  <button onclick="saveSettings()">Save</button>
-</div>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInAnonymously,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
-
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
-
-/* FIREBASE CONFIG */
-const firebaseConfig = {
-  apiKey: "AIzaSyAME65WaAba-_8WWm2mrHCEnR8feiyUiKs",
-  authDomain: "gitchat-backend-v2.firebaseapp.com",
-  projectId: "gitchat-backend-v2",
-  storageBucket: "gitchat-backend-v2.firebasestorage.app",
-  messagingSenderId: "1082807018532",
-  appId: "1:1082807018532:web:cab8abe0d41097b33fe4b1"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let currentUser = null;
-let currentServer = null;
-let displayName = "";
-let usernameColor = "#00d4ff";
-
-/* AUTH */
-
-window.login = async () => {
-  await signInWithEmailAndPassword(auth, email.value, password.value);
-};
-
-window.register = async () => {
-  await createUserWithEmailAndPassword(auth, email.value, password.value);
-};
-
-window.googleLogin = async () => {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
-};
-
-window.guestLogin = async () => {
-  if (auth.currentUser) await signOut(auth);
-  await signInAnonymously(auth);
-};
-
-window.logout = async () => {
-  await signOut(auth);
-  location.reload();
-};
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) return;
-
-  currentUser = user;
-
-  if (user.isAnonymous) {
-    displayName = "GUEST" + Math.floor(1000 + Math.random() * 9000);
-  } else {
-    displayName = user.email.split("@")[0];
-    await loadServers();
-  }
-
-  authScreen.style.display = "none";
-  app.style.display = "flex";
-});
-
-/* SERVERS */
-
-async function loadServers() {
-  const ref = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    await setDoc(ref, { servers: [] });
-    return;
-  }
-
-  renderServerList(snap.data().servers || []);
-}
-
-function renderServerList(servers) {
-  serverList.innerHTML = "";
-  servers.forEach(name => {
-    const btn = document.createElement("button");
-    btn.textContent = name;
-    btn.onclick = () => joinServer(name);
-    serverList.appendChild(btn);
-  });
-}
-
-window.createServer = async () => {
-  const name = prompt("Server name?");
-  if (!name) return;
-
-  await setDoc(doc(db, "servers", name), {
-    owner: currentUser.uid,
-    created: Date.now()
-  });
-
-  const userRef = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(userRef);
-  const servers = snap.data().servers || [];
-  servers.push(name);
-
-  await updateDoc(userRef, { servers });
-  renderServerList(servers);
-};
-
-window.joinServer = (name) => {
-  currentServer = name;
-
-  const messagesRef = collection(db, "servers", name, "messages");
-  const q = query(messagesRef, orderBy("timestamp"));
-
-  onSnapshot(q, (snapshot) => {
-    messages.innerHTML = "";
-    snapshot.forEach(docSnap => {
-      const msg = docSnap.data();
-      messages.innerHTML += `
-        <div class="message">
-          <span style="color:${msg.color}">
-            ${msg.username}
-          </span>: ${msg.text}
-        </div>`;
-    });
-  });
-};
-
-/* CHAT */
-
-window.sendMessage = async () => {
-  if (!currentServer) return alert("Join a server first.");
-  if (!messageInput.value.trim()) return;
-
-  await addDoc(collection(db, "servers", currentServer, "messages"), {
-    username: displayName,
-    color: usernameColor,
-    text: messageInput.value,
-    timestamp: Date.now()
-  });
-
-  messageInput.value = "";
-};
-
-/* SETTINGS */
-
-window.toggleSettings = () => {
-  settingsPanel.style.display =
-    settingsPanel.style.display === "none" ? "block" : "none";
-};
-
-window.saveSettings = async () => {
-  displayName = displayNameInput.value || displayName;
-  usernameColor = colorInput.value;
-
-  await setDoc(doc(db, "users", currentUser.uid), {
-    displayName,
-    color: usernameColor,
-    servers: (await getDoc(doc(db, "users", currentUser.uid))).data()?.servers || []
-  });
-
-  alert("Settings saved!");
-};
-
-</script>
-
+<script type="module" src="app.js"></script>
 </body>
 </html>
