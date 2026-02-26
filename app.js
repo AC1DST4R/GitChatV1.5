@@ -129,14 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
     joinModal.classList.remove("hidden");
   };
   $("cancelJoinBtn").onclick = () => joinModal.classList.add("hidden");
+  joinModal.onclick = (e)=> { if(e.target===joinModal) joinModal.classList.add("hidden"); };
 
   $("joinServerIdInput").addEventListener("blur", async ()=>{
     const id = $("joinServerIdInput").value.trim();
     if(!id) return;
     const snap = await getDoc(doc(db,"servers",id));
     if(!snap.exists()) return;
-    if(!snap.data().public) passwordContainer.classList.remove("hidden");
-    else passwordContainer.classList.add("hidden");
+    passwordContainer.classList.toggle(!snap.data().public);
   });
 
   $("confirmJoinBtn").onclick = async ()=>{
@@ -144,8 +144,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if(!id) return alert("Enter server ID");
     const snap = await getDoc(doc(db,"servers",id));
     if(!snap.exists()) return alert("Server not found");
+
     const server = snap.data();
     if(!server.public && $("joinPasswordInput").value!==server.password) return alert("Incorrect password");
+
     await addServerToUser(id);
     joinModal.classList.add("hidden");
   };
