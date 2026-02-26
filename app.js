@@ -37,169 +37,225 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null;
-let currentServer = null;
-let displayName = "";
-let usernameColor = "#00d4ff";
+document.addEventListener("DOMContentLoaded", () => {
 
-/* AUTH BUTTONS */
-loginBtn.onclick = () =>
-  signInWithEmailAndPassword(auth, email.value, password.value);
+  const $ = id => document.getElementById(id);
 
-registerBtn.onclick = () =>
-  createUserWithEmailAndPassword(auth, email.value, password.value);
+  const authScreen = $("authScreen");
+  const appScreen = $("app");
+  const settingsPage = $("settingsPage");
+  const messagesDiv = $("messages");
+  const serverList = $("serverList");
 
-googleBtn.onclick = async () => {
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
-};
+  let currentUser = null;
+  let currentServer = null;
+  let displayName = "";
+  let nameColor = "#00d4ff";
+  let unsubscribe = null;
 
-guestBtn.onclick = async () => {
-  if (auth.currentUser) await signOut(auth);
-  await signInAnonymously(auth);
-};
+  /* AUTH BUTTONS */
 
-logoutBtn.onclick = async () => {
-  await signOut(auth);
-};
+  $("loginBtn").onclick = () =>
+    signInWithEmailAndPassword(auth, $("email").value, $("password").value);
 
-/* AUTH STATE FIXED */
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    authScreen.classList.remove("hidden");
-    app.classList.add("hidden");
-    return;
-  }
+  $("registerBtn").onclick = () =>
+    createUserWithEmailAndPassword(auth, $("email").value, $("password").value);
 
-  currentUser = user;
+  $("googleBtn").onclick = async () => {
+    const provider = new GoogleAuthProvider();
+    await signInWithPopup(auth, provider);
+  };
 
-  displayName = user.isAnonymous
-    ? "GUEST" + Math.floor(1000 + Math.random() * 9000)
-    : user.email.split("@")[0];
+  $("guestBtn").onclick = async () => {
+    if (auth.currentUser) await signOut(auth);
+    await signInAnonymously(auth);
+  };
 
-  authScreen.classList.add("hidden");
-  app.classList.remove("hidden");
+  $("logoutBtn").onclick = async () => {
+    await signOut(auth);
+  };
 
-  await loadServers();
-});
+  /* AUTH STATE */
 
-/* SERVER CREATION SYSTEM */
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      authScreen.classList.remove("hidden");
+      appScreen.classList.add("hidden");
+      settingsPage.classList.add("hidden");
+      return;
+    }
 
-createServerBtn.onclick = async () => {
+    currentUser = user;
 
-  const serverName = prompt("Server Name:");
-  if (!serverName) return;
+    displayName = user.isAnonymous
+      ? "GUEST" + Math.floor(1000 + Math.random() * 9000)
+      : user.email.split("@")[0];
 
-  const isPublic = confirm("Make this server PUBLIC?\n\nPublic servers do not require passwords.");
+    await loadUserSettings();
+    await loadServers();
 
-  let password = null;
-
-  if (!isPublic) {
-    password = prompt("Set Server Password:");
-    if (!password) return alert("Password required for private servers.");
-  }
-
-  const serverId = crypto.randomUUID(); // auto generated ID
-
-  await setDoc(doc(db, "servers", serverId), {
-    name: serverName,
-    owner: currentUser.uid,
-    public: isPublic,
-    password: password || null,
-    created: Date.now()
+    authScreen.classList.add("hidden");
+    settingsPage.classList.add("hidden");
+    appScreen.classList.remove("hidden");
   });
 
-  await addServerToUser(serverId);
+  /* SETTINGS */
 
-  alert("Server created!");
-};
+  $("settingsBtn").onclick = () => {
+    appScreen.classList.add("hidden");
+    settingsPage.classList.remove("hidden");
 
-async function addServerToUser(serverId) {
-  const userRef = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(userRef);
+    $("displayNameInput").value = displayName;
+    $("colorInput").value = nameColor;
+  };
 
-  let servers = [];
-  if (snap.exists()) servers = snap.data().servers || [];
+  $("backBtn").onclick = () => {
+    settingsPage.classList.add("hidden");
+    appScreen.classList.remove("hidden");
+  };
 
-  servers.push(serverId);
+  $("saveSettingsBtn").onclick = async () => {
+    displayName = $("displayNameInput").value;
+    nameColor = $("colorInput").value;
 
-  await setDoc(userRef, { servers }, { merge: true });
+    await setDoc(doc(db,"users",currentUser.uid),{
+      displayName,
+      color:nameColor
+    },{merge:true});
 
-  loadServers();
-}
+    alert("Saved!");
+  };
 
-/* LOAD SERVERS */
-
-async function loadServers() {
-  const userRef = doc(db, "users", currentUser.uid);
-  const snap = await getDoc(userRef);
-
-  serverList.innerHTML = "";
-
-  if (!snap.exists()) return;
-
-  const servers = snap.data().servers || [];
-
-  for (const id of servers) {
-    const serverSnap = await getDoc(doc(db, "servers", id));
-    if (!serverSnap.exists()) continue;
-
-    const btn = document.createElement("button");
-    btn.textContent = serverSnap.data().name;
-
-    btn.onclick = () => joinServer(id);
-
-    serverList.appendChild(btn);
-  }
-}
-
-/* JOIN SERVER */
-
-async function joinServer(serverId) {
-  const serverSnap = await getDoc(doc(db, "servers", serverId));
-  if (!serverSnap.exists()) return;
-
-  const server = serverSnap.data();
-
-  if (!server.public) {
-    const input = prompt("Enter server password:");
-    if (input !== server.password) {
-      alert("Wrong password!");
-      return;
+  async function loadUserSettings(){
+    const snap = await getDoc(doc(db,"users",currentUser.uid));
+    if(snap.exists()){
+      displayName = snap.data().displayName || displayName;
+      nameColor = snap.data().color || nameColor;
     }
   }
 
-  currentServer = serverId;
+  /* SERVER SYSTEM */
 
-  const messagesRef = collection(db, "servers", serverId, "messages");
-  const q = query(messagesRef, orderBy("timestamp"));
+  $("createServerBtn").onclick = async () => {
+    const name = prompt("Server Name:");
+    if(!name) return;
 
-  onSnapshot(q, (snapshot) => {
-    messages.innerHTML = "";
-    snapshot.forEach(doc => {
-      const msg = doc.data();
-      messages.innerHTML += `
-        <div>
-          <span style="color:${msg.color}">
-          ${msg.username}
-          </span>: ${msg.text}
-        </div>`;
+    const isPublic = confirm("Make server public?\nOK = Public\nCancel = Private");
+
+    let password = null;
+
+    if(!isPublic){
+      password = prompt("Set password:");
+      if(!password) return alert("Password required.");
+    }
+
+    const id = crypto.randomUUID();
+
+    await setDoc(doc(db,"servers",id),{
+      name,
+      owner:currentUser.uid,
+      public:isPublic,
+      password,
+      created:Date.now()
     });
+
+    await addServerToUser(id);
+  };
+
+  $("joinServerBtn").onclick = async () => {
+    const id = prompt("Enter Server ID:");
+    if(!id) return;
+
+    const snap = await getDoc(doc(db,"servers",id));
+    if(!snap.exists()) return alert("Server not found.");
+
+    const server = snap.data();
+
+    if(!server.public){
+      const input = prompt("Enter password:");
+      if(input !== server.password){
+        alert("Wrong password.");
+        return;
+      }
+    }
+
+    await addServerToUser(id);
+  };
+
+  async function addServerToUser(id){
+    const userRef = doc(db,"users",currentUser.uid);
+    const snap = await getDoc(userRef);
+
+    let servers = snap.exists() ? snap.data().servers || [] : [];
+    if(!servers.includes(id)) servers.push(id);
+
+    await setDoc(userRef,{servers},{merge:true});
+    loadServers();
+  }
+
+  async function loadServers(){
+    serverList.innerHTML="";
+    const snap = await getDoc(doc(db,"users",currentUser.uid));
+    if(!snap.exists()) return;
+
+    const servers = snap.data().servers || [];
+
+    for(const id of servers){
+      const serverSnap = await getDoc(doc(db,"servers",id));
+      if(!serverSnap.exists()) continue;
+
+      const btn = document.createElement("button");
+      btn.textContent = serverSnap.data().name;
+      btn.onclick = ()=> joinServer(id);
+      serverList.appendChild(btn);
+    }
+  }
+
+  async function joinServer(id){
+    currentServer = id;
+
+    const serverSnap = await getDoc(doc(db,"servers",id));
+    $("currentServerName").textContent = serverSnap.data().name;
+
+    if(unsubscribe) unsubscribe();
+
+    const q = query(
+      collection(db,"servers",id,"messages"),
+      orderBy("timestamp")
+    );
+
+    unsubscribe = onSnapshot(q,(snapshot)=>{
+      messagesDiv.innerHTML="";
+      snapshot.forEach(docSnap=>{
+        const msg = docSnap.data();
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+
+        messagesDiv.innerHTML += `
+          <div>
+            <span style="color:${msg.color}">${msg.username}</span>
+            <span class="timestamp">${time}</span>
+            : ${msg.text}
+          </div>
+        `;
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+  }
+
+  /* CHAT */
+
+  $("messageInput").addEventListener("keydown", async e=>{
+    if(e.key !== "Enter") return;
+    if(!currentServer) return alert("Join a server first.");
+
+    await addDoc(collection(db,"servers",currentServer,"messages"),{
+      username:displayName,
+      color:nameColor,
+      text:e.target.value,
+      timestamp:Date.now()
+    });
+
+    e.target.value="";
   });
-}
 
-/* CHAT */
-
-messageInput.addEventListener("keydown", async (e) => {
-  if (e.key !== "Enter") return;
-  if (!currentServer) return alert("Join a server first.");
-
-  await addDoc(collection(db, "servers", currentServer, "messages"), {
-    username: displayName,
-    color: usernameColor,
-    text: messageInput.value,
-    timestamp: Date.now()
-  });
-
-  messageInput.value = "";
 });
