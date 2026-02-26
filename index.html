@@ -2,20 +2,50 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>🔥 GitChat V3</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔥 GitChat V4</title>
 
 <style>
 body {
   margin:0;
-  font-family:Arial;
+  font-family: Arial;
   background:#36393f;
   color:white;
   display:flex;
   height:100vh;
 }
 
-/* Sidebar */
-#sidebar {
+/* AUTH SCREEN */
+#authScreen {
+  margin:auto;
+  text-align:center;
+}
+
+input {
+  padding:8px;
+  margin:5px;
+  border-radius:5px;
+  border:none;
+}
+
+button {
+  padding:8px;
+  margin:5px;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  background:#5865F2;
+  color:white;
+}
+
+/* APP LAYOUT */
+#app {
+  display:none;
+  width:100%;
+}
+
+/* SERVER SIDEBAR */
+#serverSidebar {
   width:220px;
   background:#2f3136;
   padding:15px;
@@ -24,24 +54,12 @@ body {
   flex-direction:column;
 }
 
-#sidebar h2 { margin-top:0; }
-
-button {
-  padding:8px;
-  margin:5px 0;
-  border:none;
-  border-radius:5px;
-  cursor:pointer;
-  background:#5865F2;
-  color:white;
+#serverList button {
+  width:100%;
+  background:#40444b;
 }
 
-.small-btn {
-  background:#444;
-  font-size:12px;
-}
-
-/* Main Chat */
+/* MAIN CHAT */
 #main {
   flex:1;
   display:flex;
@@ -58,10 +76,6 @@ button {
   margin-bottom:8px;
 }
 
-.username {
-  font-weight:bold;
-}
-
 #chatInputArea {
   padding:10px;
   background:#40444b;
@@ -70,22 +84,17 @@ button {
 
 #chatInputArea input {
   flex:1;
-  padding:10px;
-  border:none;
-  border-radius:5px;
 }
 
-/* Auth Screen */
-#authScreen {
-  margin:auto;
-  text-align:center;
-}
-
-input {
-  padding:8px;
-  margin:5px;
-  border-radius:5px;
-  border:none;
+/* SETTINGS PANEL */
+#settingsPanel {
+  display:none;
+  position:fixed;
+  right:20px;
+  top:20px;
+  background:#2f3136;
+  padding:15px;
+  border-radius:8px;
 }
 </style>
 </head>
@@ -93,41 +102,42 @@ input {
 
 <!-- AUTH SCREEN -->
 <div id="authScreen">
-  <h1>🔥 GitChat V3</h1>
+  <h1>🔥 GitChat</h1>
   <input type="email" id="email" placeholder="Email"><br>
   <input type="password" id="password" placeholder="Password"><br>
   <button onclick="login()">Login</button>
   <button onclick="register()">Register</button><br><br>
   <button onclick="googleLogin()">Continue with Google</button><br><br>
-  <button class="small-btn" onclick="guestLogin()">Continue as Guest</button>
+  <button onclick="guestLogin()">Continue as Guest</button>
 </div>
 
 <!-- APP -->
-<div id="app" style="display:none; width:100%;">
-  
-  <!-- SIDEBAR -->
-  <div id="sidebar">
-    <h2>Rooms</h2>
-    <input type="text" id="roomInput" placeholder="Room name">
-    <button onclick="joinRoom()">Join</button>
+<div id="app">
 
+  <!-- SERVER SIDEBAR -->
+  <div id="serverSidebar">
+    <h3>Your Servers</h3>
+    <div id="serverList"></div>
+    <button onclick="createServer()">+ Create Server</button>
     <hr>
     <button onclick="toggleSettings()">⚙ Settings</button>
-    <button class="small-btn" onclick="logout()">Logout</button>
+    <button onclick="logout()">Logout</button>
   </div>
 
-  <!-- MAIN -->
+  <!-- MAIN CHAT -->
   <div id="main">
     <div id="messages"></div>
     <div id="chatInputArea">
-      <input type="text" id="messageInput" placeholder="Type message..."
-      onkeydown="if(event.key==='Enter') sendMessage()">
+      <input type="text" id="messageInput"
+        placeholder="Type message..."
+        onkeydown="if(event.key==='Enter') sendMessage()">
     </div>
   </div>
+
 </div>
 
-<!-- SETTINGS PANEL -->
-<div id="settingsPanel" style="display:none; position:fixed; right:20px; top:20px; background:#2f3136; padding:15px; border-radius:8px;">
+<!-- SETTINGS -->
+<div id="settingsPanel">
   <h3>Settings</h3>
   <input type="text" id="displayNameInput" placeholder="Display Name"><br>
   <input type="color" id="colorInput"><br>
@@ -157,11 +167,11 @@ import {
   orderBy,
   doc,
   setDoc,
-  getDoc
+  getDoc,
+  updateDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
-
-/* 🔥 Firebase Config */
+/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyAME65WaAba-_8WWm2mrHCEnR8feiyUiKs",
   authDomain: "gitchat-backend-v2.firebaseapp.com",
@@ -176,21 +186,18 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null;
-let currentRoom = "";
+let currentServer = null;
 let displayName = "";
 let usernameColor = "#00d4ff";
 
-
-/* 🔐 AUTH */
+/* AUTH */
 
 window.login = async () => {
-  await signInWithEmailAndPassword(auth,
-    email.value, password.value);
+  await signInWithEmailAndPassword(auth, email.value, password.value);
 };
 
 window.register = async () => {
-  await createUserWithEmailAndPassword(auth,
-    email.value, password.value);
+  await createUserWithEmailAndPassword(auth, email.value, password.value);
 };
 
 window.googleLogin = async () => {
@@ -199,6 +206,7 @@ window.googleLogin = async () => {
 };
 
 window.guestLogin = async () => {
+  if (auth.currentUser) await signOut(auth);
   await signInAnonymously(auth);
 };
 
@@ -216,73 +224,82 @@ onAuthStateChanged(auth, async (user) => {
     displayName = "GUEST" + Math.floor(1000 + Math.random() * 9000);
   } else {
     displayName = user.email.split("@")[0];
+    await loadServers();
   }
-
-  await loadUserSettings();
 
   authScreen.style.display = "none";
   app.style.display = "flex";
 });
 
+/* SERVERS */
 
-/* ⚙ SETTINGS */
-
-async function loadUserSettings() {
+async function loadServers() {
   const ref = doc(db, "users", currentUser.uid);
   const snap = await getDoc(ref);
 
-  if (snap.exists()) {
-    displayName = snap.data().displayName || displayName;
-    usernameColor = snap.data().color || usernameColor;
+  if (!snap.exists()) {
+    await setDoc(ref, { servers: [] });
+    return;
   }
+
+  renderServerList(snap.data().servers || []);
 }
 
-window.saveSettings = async () => {
-  displayName = displayNameInput.value || displayName;
-  usernameColor = colorInput.value;
+function renderServerList(servers) {
+  serverList.innerHTML = "";
+  servers.forEach(name => {
+    const btn = document.createElement("button");
+    btn.textContent = name;
+    btn.onclick = () => joinServer(name);
+    serverList.appendChild(btn);
+  });
+}
 
-  await setDoc(doc(db, "users", currentUser.uid), {
-    displayName,
-    color: usernameColor
+window.createServer = async () => {
+  const name = prompt("Server name?");
+  if (!name) return;
+
+  await setDoc(doc(db, "servers", name), {
+    owner: currentUser.uid,
+    created: Date.now()
   });
 
-  alert("Saved!");
+  const userRef = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(userRef);
+  const servers = snap.data().servers || [];
+  servers.push(name);
+
+  await updateDoc(userRef, { servers });
+  renderServerList(servers);
 };
 
-window.toggleSettings = () => {
-  settingsPanel.style.display =
-    settingsPanel.style.display === "none" ? "block" : "none";
-};
+window.joinServer = (name) => {
+  currentServer = name;
 
-
-/* 💬 CHAT */
-
-window.joinRoom = () => {
-  currentRoom = roomInput.value.trim();
-  if (!currentRoom) return;
-
-  const messagesRef = collection(db, "rooms", currentRoom, "messages");
+  const messagesRef = collection(db, "servers", name, "messages");
   const q = query(messagesRef, orderBy("timestamp"));
 
   onSnapshot(q, (snapshot) => {
     messages.innerHTML = "";
-    snapshot.forEach(doc => {
-      const msg = doc.data();
+    snapshot.forEach(docSnap => {
+      const msg = docSnap.data();
       messages.innerHTML += `
         <div class="message">
-          <span class="username" style="color:${msg.color}">
-          ${msg.username}
+          <span style="color:${msg.color}">
+            ${msg.username}
           </span>: ${msg.text}
         </div>`;
     });
-    messages.scrollTop = messages.scrollHeight;
   });
 };
 
+/* CHAT */
+
 window.sendMessage = async () => {
+  if (!currentServer) return alert("Join a server first.");
   if (!messageInput.value.trim()) return;
 
-  await addDoc(collection(db, "rooms", currentRoom, "messages"), {
+  await addDoc(collection(db, "servers", currentServer, "messages"), {
     username: displayName,
     color: usernameColor,
     text: messageInput.value,
@@ -290,6 +307,26 @@ window.sendMessage = async () => {
   });
 
   messageInput.value = "";
+};
+
+/* SETTINGS */
+
+window.toggleSettings = () => {
+  settingsPanel.style.display =
+    settingsPanel.style.display === "none" ? "block" : "none";
+};
+
+window.saveSettings = async () => {
+  displayName = displayNameInput.value || displayName;
+  usernameColor = colorInput.value;
+
+  await setDoc(doc(db, "users", currentUser.uid), {
+    displayName,
+    color: usernameColor,
+    servers: (await getDoc(doc(db, "users", currentUser.uid))).data()?.servers || []
+  });
+
+  alert("Settings saved!");
 };
 
 </script>
