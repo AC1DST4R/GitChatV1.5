@@ -39,9 +39,10 @@ button {
 }
 
 #sidebar {
-  width:220px;
+  width:230px;
   background:#2f3136;
   padding:15px;
+  box-sizing:border-box;
 }
 
 #serverList button {
@@ -55,6 +56,12 @@ button {
   flex-direction:column;
 }
 
+#topBar {
+  padding:10px;
+  background:#2f3136;
+  border-bottom:1px solid #444;
+}
+
 #messages {
   flex:1;
   padding:15px;
@@ -64,4 +71,10 @@ button {
 #chatBar {
   padding:10px;
   background:#40444b;
+}
+
+.timestamp {
+  font-size:12px;
+  color:#aaa;
+  margin-left:6px;
 }
