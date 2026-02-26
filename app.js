@@ -129,7 +129,12 @@ document.addEventListener("DOMContentLoaded", () => {
     joinModal.classList.remove("hidden");
   };
   $("cancelJoinBtn").onclick = () => joinModal.classList.add("hidden");
-  joinModal.onclick = (e)=> { if(e.target===joinModal) joinModal.classList.add("hidden"); };
+
+  // Overlay click closes modal
+  $("joinModal").querySelector(".modalOverlay").onclick = () => joinModal.classList.add("hidden");
+
+  // Click inside content does not close modal
+  $("joinModal").querySelector(".modalContent").onclick = (e) => e.stopPropagation();
 
   $("joinServerIdInput").addEventListener("blur", async ()=>{
     const id = $("joinServerIdInput").value.trim();
