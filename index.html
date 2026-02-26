@@ -1,104 +1,167 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🔥 GitChat V2</title>
+<title>🔥 GitChat V3</title>
 
 <style>
-body { font-family: Arial; background:#1e1e2f; color:white; text-align:center; margin:0; }
-h1 { margin-top:20px; }
-
-.container { margin-top:40px; }
-
-input, button {
-  padding:10px;
-  margin:5px;
-  border-radius:6px;
-  border:none;
+body {
+  margin:0;
+  font-family:Arial;
+  background:#36393f;
+  color:white;
+  display:flex;
+  height:100vh;
 }
 
+/* Sidebar */
+#sidebar {
+  width:220px;
+  background:#2f3136;
+  padding:15px;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+}
+
+#sidebar h2 { margin-top:0; }
+
 button {
+  padding:8px;
+  margin:5px 0;
+  border:none;
+  border-radius:5px;
   cursor:pointer;
   background:#5865F2;
   color:white;
 }
 
-#chatContainer { display:none; margin-top:20px; }
-
-#messages {
-  height:300px;
-  overflow-y:auto;
-  border:1px solid #444;
-  padding:10px;
-  margin-bottom:10px;
-  background:#2c2c3c;
+.small-btn {
+  background:#444;
+  font-size:12px;
 }
 
-.message { text-align:left; margin-bottom:5px; }
-.username { font-weight:bold; color:#00d4ff; }
-.small-btn { background:#444; font-size:12px; padding:6px; }
+/* Main Chat */
+#main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+#messages {
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+}
+
+.message {
+  margin-bottom:8px;
+}
+
+.username {
+  font-weight:bold;
+}
+
+#chatInputArea {
+  padding:10px;
+  background:#40444b;
+  display:flex;
+}
+
+#chatInputArea input {
+  flex:1;
+  padding:10px;
+  border:none;
+  border-radius:5px;
+}
+
+/* Auth Screen */
+#authScreen {
+  margin:auto;
+  text-align:center;
+}
+
+input {
+  padding:8px;
+  margin:5px;
+  border-radius:5px;
+  border:none;
+}
 </style>
 </head>
 <body>
 
-<h1>🔥 GitChat V2</h1>
-
-<!-- LOGIN SCREEN -->
-<div id="authContainer" class="container">
-  <h2>Login</h2>
+<!-- AUTH SCREEN -->
+<div id="authScreen">
+  <h1>🔥 GitChat V3</h1>
   <input type="email" id="email" placeholder="Email"><br>
   <input type="password" id="password" placeholder="Password"><br>
   <button onclick="login()">Login</button>
-  <button onclick="register()">Register</button>
-  <br><br>
-  <button onclick="googleLogin()">Continue with Google</button>
-  <br><br>
+  <button onclick="register()">Register</button><br><br>
+  <button onclick="googleLogin()">Continue with Google</button><br><br>
   <button class="small-btn" onclick="guestLogin()">Continue as Guest</button>
 </div>
 
-<!-- ROOM SELECTION -->
-<div id="roomSelection" class="container" style="display:none;">
-  <input type="text" id="roomInput" placeholder="Enter Room Name">
-  <button onclick="joinRoom()">Join Room</button>
+<!-- APP -->
+<div id="app" style="display:none; width:100%;">
+  
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <h2>Rooms</h2>
+    <input type="text" id="roomInput" placeholder="Room name">
+    <button onclick="joinRoom()">Join</button>
+
+    <hr>
+    <button onclick="toggleSettings()">⚙ Settings</button>
+    <button class="small-btn" onclick="logout()">Logout</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="messages"></div>
+    <div id="chatInputArea">
+      <input type="text" id="messageInput" placeholder="Type message..."
+      onkeydown="if(event.key==='Enter') sendMessage()">
+    </div>
+  </div>
 </div>
 
-<!-- CHAT -->
-<div id="chatContainer">
-  <h2 id="roomTitle"></h2>
-  <div id="messages"></div>
-  <input type="text" id="messageInput" placeholder="Type message..." 
-    onkeydown="if(event.key==='Enter') sendMessage()">
-  <button onclick="sendMessage()">Send</button>
+<!-- SETTINGS PANEL -->
+<div id="settingsPanel" style="display:none; position:fixed; right:20px; top:20px; background:#2f3136; padding:15px; border-radius:8px;">
+  <h3>Settings</h3>
+  <input type="text" id="displayNameInput" placeholder="Display Name"><br>
+  <input type="color" id="colorInput"><br>
+  <button onclick="saveSettings()">Save</button>
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
   signInAnonymously,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
 
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  onSnapshot, 
-  query, 
-  orderBy 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  setDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 
-/* =============================
-   🔥 YOUR NEW FIREBASE CONFIG
-============================= */
-
+/* 🔥 Firebase Config */
 const firebaseConfig = {
   apiKey: "AIzaSyAME65WaAba-_8WWm2mrHCEnR8feiyUiKs",
   authDomain: "gitchat-backend-v2.firebaseapp.com",
@@ -112,102 +175,121 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentRoom = "";
 let currentUser = null;
+let currentRoom = "";
+let displayName = "";
+let usernameColor = "#00d4ff";
 
 
-/* =============================
-   🔐 AUTH FUNCTIONS
-============================= */
+/* 🔐 AUTH */
 
-window.login = async function() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  await signInWithEmailAndPassword(auth, email, password);
+window.login = async () => {
+  await signInWithEmailAndPassword(auth,
+    email.value, password.value);
 };
 
-window.register = async function() {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-  await createUserWithEmailAndPassword(auth, email, password);
+window.register = async () => {
+  await createUserWithEmailAndPassword(auth,
+    email.value, password.value);
 };
 
-window.googleLogin = async function() {
+window.googleLogin = async () => {
   const provider = new GoogleAuthProvider();
   await signInWithPopup(auth, provider);
 };
 
-window.guestLogin = async function() {
+window.guestLogin = async () => {
   await signInAnonymously(auth);
 };
 
+window.logout = async () => {
+  await signOut(auth);
+  location.reload();
+};
 
-/* =============================
-   👀 AUTH STATE LISTENER
-============================= */
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    currentUser = user;
-    document.getElementById("authContainer").style.display = "none";
-    document.getElementById("roomSelection").style.display = "block";
+  currentUser = user;
+
+  if (user.isAnonymous) {
+    displayName = "GUEST" + Math.floor(1000 + Math.random() * 9000);
+  } else {
+    displayName = user.email.split("@")[0];
   }
+
+  await loadUserSettings();
+
+  authScreen.style.display = "none";
+  app.style.display = "flex";
 });
 
 
-/* =============================
-   💬 CHAT
-============================= */
+/* ⚙ SETTINGS */
 
-window.joinRoom = function () {
-  currentRoom = document.getElementById("roomInput").value.trim();
-  if (!currentRoom) return alert("Enter room name!");
+async function loadUserSettings() {
+  const ref = doc(db, "users", currentUser.uid);
+  const snap = await getDoc(ref);
 
-  document.getElementById("roomSelection").style.display = "none";
-  document.getElementById("chatContainer").style.display = "block";
-  document.getElementById("roomTitle").innerText = "Room: " + currentRoom;
+  if (snap.exists()) {
+    displayName = snap.data().displayName || displayName;
+    usernameColor = snap.data().color || usernameColor;
+  }
+}
 
-  loadMessages();
+window.saveSettings = async () => {
+  displayName = displayNameInput.value || displayName;
+  usernameColor = colorInput.value;
+
+  await setDoc(doc(db, "users", currentUser.uid), {
+    displayName,
+    color: usernameColor
+  });
+
+  alert("Saved!");
 };
 
-function loadMessages() {
+window.toggleSettings = () => {
+  settingsPanel.style.display =
+    settingsPanel.style.display === "none" ? "block" : "none";
+};
+
+
+/* 💬 CHAT */
+
+window.joinRoom = () => {
+  currentRoom = roomInput.value.trim();
+  if (!currentRoom) return;
+
   const messagesRef = collection(db, "rooms", currentRoom, "messages");
   const q = query(messagesRef, orderBy("timestamp"));
 
   onSnapshot(q, (snapshot) => {
-    const messagesDiv = document.getElementById("messages");
-    messagesDiv.innerHTML = "";
-
-    snapshot.forEach((doc) => {
+    messages.innerHTML = "";
+    snapshot.forEach(doc => {
       const msg = doc.data();
-      const div = document.createElement("div");
-      div.classList.add("message");
-
-      div.innerHTML = `
-        <span class="username">${msg.username}:</span> ${msg.text}
-      `;
-
-      messagesDiv.appendChild(div);
+      messages.innerHTML += `
+        <div class="message">
+          <span class="username" style="color:${msg.color}">
+          ${msg.username}
+          </span>: ${msg.text}
+        </div>`;
     });
-
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messages.scrollTop = messages.scrollHeight;
   });
-}
+};
 
-window.sendMessage = async function () {
-  const input = document.getElementById("messageInput");
-  const text = input.value.trim();
-  if (!text) return;
+window.sendMessage = async () => {
+  if (!messageInput.value.trim()) return;
 
-  const messagesRef = collection(db, "rooms", currentRoom, "messages");
-
-  await addDoc(messagesRef, {
-    username: currentUser.email || "Guest",
-    text: text,
+  await addDoc(collection(db, "rooms", currentRoom, "messages"), {
+    username: displayName,
+    color: usernameColor,
+    text: messageInput.value,
     timestamp: Date.now()
   });
 
-  input.value = "";
+  messageInput.value = "";
 };
 
 </script>
