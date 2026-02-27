@@ -1,77 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>🔥 GitChat</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <title>GitHub V2 Development</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #0d1117;
+            color: #58a6ff;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        h1 {
+            font-size: 3rem;
+            text-align: center;
+            border: 2px solid #58a6ff;
+            padding: 20px 40px;
+            border-radius: 12px;
+            box-shadow: 0 0 20px #58a6ff55;
+        }
+    </style>
 </head>
 <body>
-
-<!-- AUTH SCREEN -->
-<div id="authScreen" class="center">
-  <h1>🔥 GitChat</h1>
-  <input type="email" id="email" placeholder="Email"><br>
-  <input type="password" id="password" placeholder="Password"><br>
-  <button id="loginBtn">Login</button>
-  <button id="registerBtn">Register</button><br><br>
-  <button id="googleBtn">Continue with Google</button><br><br>
-  <button id="guestBtn">Continue as Guest</button>
-</div>
-
-<!-- MAIN APP -->
-<div id="app" class="hidden">
-
-  <!-- SIDEBAR -->
-  <div id="sidebar">
-    <h3>Your Servers</h3>
-    <div id="serverList"></div>
-
-    <button id="createServerBtn">+ Create Server</button>
-    <button id="joinServerBtn">Join Server</button>
-
-    <hr>
-    <button id="settingsBtn">⚙ Settings</button>
-    <button id="logoutBtn">Logout</button>
-  </div>
-
-  <!-- CHAT AREA -->
-  <div id="main">
-    <div id="topBar">
-      <span id="currentServerName">No server selected</span>
-    </div>
-    <div id="messages"></div>
-    <div id="chatBar">
-      <input type="text" id="messageInput" placeholder="Type message...">
-    </div>
-  </div>
-
-</div>
-
-<!-- SETTINGS UI -->
-<div id="settingsPage" class="hidden center">
-  <h2>⚙ Settings</h2>
-  <label>Display Name:</label><br>
-  <input type="text" id="displayNameInput"><br>
-  <label>Username Color:</label><br>
-  <input type="color" id="colorInput"><br><br>
-  <button id="saveSettingsBtn">Save</button>
-  <button id="backBtn">Back</button>
-</div>
-
-<!-- JOIN SERVER MODAL -->
-<div id="joinModal" class="modal hidden">
-  <div class="modalOverlay"></div>
-  <div class="modalContent">
-    <h3>Join Server</h3>
-    <input type="text" id="joinServerIdInput" placeholder="Server ID"><br>
-    <div id="passwordContainer" class="hidden">
-      <input type="password" id="joinPasswordInput" placeholder="Server Password"><br>
-    </div>
-    <button id="confirmJoinBtn">Join</button>
-    <button id="cancelJoinBtn">Cancel</button>
-  </div>
-</div>
-
-<script type="module" src="app.js"></script>
+    <h1>GITHUB V2 DEVELOPMENT IN PROGRESS</h1>
 </body>
 </html>
